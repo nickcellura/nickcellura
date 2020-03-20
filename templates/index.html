@@ -1,0 +1,486 @@
+<html>
+<head>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<script src="https://use.fontawesome.com/bd764b2404.js"></script>
+<script>
+var stack = []
+var tabs = []
+var filterlist = []
+var operand_set = 0
+
+$(document).ready(function () {
+	$('#save').click(function (e) {
+		compute(true)
+	})
+	$('#refresh').click(function (e) {
+		init()
+	})
+
+    $('input[type="checkbox"]').click(function () {
+	    createFilterList()
+    })
+    $('.sheet-button').click(function (e) {
+        e.preventDefault();
+	var obj = $(this)
+	if (obj.hasClass('selected')) {
+	    obj.removeClass('selected')
+	    var index = tabs.indexOf(obj.attr('sheetname') + '-' + obj.text())
+	    if (index > -1) {
+		    tabs.splice(index, 1)
+	    }
+	} else {
+	    obj.addClass('selected')
+	    tabs.push(obj.attr('sheetname') + '-' + obj.text())
+	}
+	compute(false)
+    })
+
+    $('.toggle').click(function(e) {
+        e.preventDefault();
+        var obj = $(this);
+        if (obj.next().hasClass('show')) {
+            obj.next().removeClass('show');
+            obj.next().slideUp(350);
+        } else {
+            obj.parent().parent().find('li .inner').removeClass('show');
+            obj.parent().parent().find('li .inner').slideUp(350);
+	    console.log ('showing next element') 
+            obj.next().toggleClass('show');
+            obj.next().slideToggle(350);
+        }
+    });
+
+    init()
+})
+
+function createFilterList() {
+	    filterlist = []
+	    console.log ('create filter list called')
+	    $('input[type="checkbox"]:checked').each(function () {
+		    console.log('adding :' + $(this).attr('name'))
+		    filterlist.push($(this).attr('name'))
+	    })
+	    setTimeout(function () {
+	        compute(false)
+	    }, 100)
+}
+
+function init () {
+	$('#tabs .sheet-button').each(function() {
+		console.log ($(this))
+		$(this).addClass('selected')
+		tabs.push($(this).attr('sheetname') + '-' + $(this).text())
+	})
+	stack = []
+	operand_set = 0
+	createFilterList()
+	$('#mytable').remove()
+	$('#left > .row-button').remove()
+	$('#left > .col-button').remove()
+	$('#left > .operand-button').remove()
+	$('#compute').text('')
+}
+
+function makeTable(container, data) {
+	    var table = $("<table id='mytable'/>").addClass('mytable')
+	    $.each(data, function(rowIndex, r) {
+	            var row = $("<tr/>");
+	            $.each(r, function(colIndex, c) { 
+	                row.append($("<t"+(rowIndex == 0 ?  "h" : "d")+"/>").text(c));
+	            });
+	            table.append(row);
+	    });
+	    return container.append(table);
+}
+
+function appendRow(table, data) {
+	    $.each(data, function(rowIndex, r) {
+	            var row = $("<tr/>");
+	            $.each(r, function(colIndex, c) { 
+	                row.append($("<td/>").text(c));
+	            });
+	            table.append(row);
+	    });
+}
+function compute(flag) {
+              $.ajax({
+		    type:"GET",
+		    dataType: "json",
+	            data: { 'stack': JSON.stringify(stack), 'tabs': JSON.stringify(tabs), 'filterlist': JSON.stringify(filterlist), 'save': flag},
+		    url: "/calculate",
+		    success: successCallback,
+              })
+
+	      function successCallback (data){
+			            console.log(data);
+			            $('#mytable').remove()
+			            keys = data.left_keys
+				    keys.unshift("Company")
+				    keys.push("Sum")
+				    keys.push("Avg")
+	                            vals = data.left_vals
+			            for (var i=0; i< vals.length; i++) {
+			                if (i==0) {
+						makeTable($('#table-div'), [ keys, vals[i] ])
+					} else {
+			                        appendRow($('#mytable'), [ vals[i] ])
+					}
+			            }
+
+	                            vals = data.right_vals
+			            for (var i=0; i< vals.length; i++) {
+			                appendRow($('#mytable'), [ vals[i] ])
+			            }
+			            $('#compute').text(data.compute)
+		      if (flag == true) {
+				window.location.href = '/getxls/' + data.saved_file
+		      }
+	      }
+}
+
+function getStackElement(elname, text) {
+      splits = elname.split('_')
+      eltype = splits[0]
+      return (eltype + "_" + text)
+}
+
+function drag(ev) {
+  ev.dataTransfer.setData("text", ev.target.id)
+}
+function allowDrop(ev) {
+  ev.preventDefault()
+}
+function drop(ev) {
+  ev.preventDefault()
+  var data = ev.dataTransfer.getData("text")
+	console.log ('ready to drop' + data)
+  if (ev.target.id == 'left') {
+      ev.target.appendChild(document.getElementById(data).cloneNode(true))
+      stack.push(getStackElement(data, $('#'+data).text()))
+	  console.log (stack)
+      compute(false)
+  }	
+  if (ev.target.id != 'left') {
+	  $('#left > #' + data).remove()
+	  var index = stack.indexOf(getStackElement(data, $('#'+data).text()))
+	  if (index > -1) {
+	   stack.splice(index, 1)
+	  }
+	  console.log (stack)
+          compute(false)
+  }
+}
+</script>
+
+<style>
+* {
+box-sizing: border-box;
+font-family: 'Open Sans',sans-serif;
+font-weight: 300;
+}
+
+a {
+text-decoration: none;
+color: inherit;
+}
+ul {
+list-style: none;
+padding: 0;
+}
+
+.sheet-button.selected {
+	color: green;
+	border-color: green;
+}
+
+a {
+	height:40;
+}
+
+.inner {
+padding-left: 1em;
+overflow: hidden;
+display: none;
+}
+.inner.show {
+/*display: block;*/
+}
+li {
+margin: .5em 0;
+}
+a.toggle {
+    width: 100%;
+    display: block;
+    background: rgba(43,50,47,0.78);
+    color: #fefefe;
+    padding: .75em;
+    border-radius: 0.15em;
+    transition: background .3s ease;
+}
+
+li.hover, a.hover {
+    background: rgba(38, 8, 0, 0.78);
+}
+.mytable {
+	border: solid 1px #DDEEEE;
+	border-collapse: collapse;
+	border-spacing: 0;
+	font: normal 13px Arial, sans-serif;
+}
+.mytable tr th {
+	background-color: #DDEFEF;
+	border: solid 1px #DDEEEE;
+	color: #336B6B;
+	padding: 10px;
+	text-align: left;
+	text-shadow: 1px 1px 1px #fff;
+	font-weight: bold;
+}
+.mytable tr td {
+	border: solid 1px #DDEEEE;
+	color: #333;
+	padding: 10px;
+	text-shadow: 1px 1px 1px #fff;
+}
+
+.working-pane {
+    width: auto; 
+    height: 100%;
+    padding: 10px;
+    border: none;
+    padding-top: 20px;
+}
+
+#left{
+    width: 45%;
+    text-align: left;
+}
+
+#icon-panel{
+    width: 100px;
+    height: 100%;
+    text-align: left;
+    background-color:cadetblue;
+    display: flex;
+    justify-content: space-evenly;
+}
+#compute-icon{
+    width: 10%;
+    text-align: left;
+    font-size: 30px;
+}
+
+#compute{
+    width: 45%;
+    text-align: left;
+    font-size: 30px;
+}
+
+.fa-refresh:hover {
+	color: white;
+}
+.fa-save:hover {
+	color: white;
+}
+.container {
+	padding: 10px;
+}
+
+.header {
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;	    
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.sheet-button, .row-button, .col-button, .operand-button {
+	margin: 1px;
+}
+
+.formula-builder {
+    width: 100%;
+    height: 12%;
+    display: flex;
+    float: left;	
+background-color: lightblue;
+align-items: center;
+border-left: solid white 10px;
+border-right: solid white 10px;
+
+}
+
+.results-pane {
+    width: 100%;
+    height: 40%;
+    padding: 10px;
+    float:left;
+}
+#footnote {
+    position: absolute;
+    overflow: hidden;
+}
+#table-div {
+	text-align: right;
+	width: 50%;
+}
+
+details {
+	border: 1px solid darkgrey;
+	background: darkgrey;
+	padding: 0.5%;
+	box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+
+</style>
+</head>
+
+<body>
+<div class='header'>
+    <h1> Formulas </h1>
+</div>
+<div class='container'>
+<ul class="accordion" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <li>
+        <a class="toggle" href="javascript:void(0);">Sheets</a>
+        <ul class="inner">
+	    <div id='tabs' class='container'>
+		    <p> Click on the tab/sheet you wish to use for the calculation. All tabs are selected to begin with. </p>
+	    {% for key, vals in tabs.items() %}
+	    <hr> {{ key }} - 
+	    {% for tab in vals %}
+	    <button class='sheet-button' sheetname="{{ key }}" id="tab_{{ loop.index }}" width="80%" height="30%">{{ tab }}</button>
+	    {% endfor %}
+	    {% endfor %}
+	    </div>
+	</ul>
+    </li>
+    <li>
+        <a class="toggle" href="javascript:void(0);">Company Profile</a>
+        <ul class="inner">
+		<div class='container'>
+		<details>
+			<summary> Industry </summary>
+			<p style='margin:5; font-size:14; margin-left:50'>
+			{% for ind in industry %}
+			<input type='checkbox' id='Industry_{{ind}}' name='Industry_{{ind}}' checked>
+			<label for="{{ind}}">{{ ind }}</label>
+			{% endfor %}
+			</p>
+		</details>
+		</div>
+		<div class='container'>
+		<details>
+			<summary> Revenue </summary>
+			<p style='margin:5; font-size:14; margin-left:50'>
+			{% for rev in revenues %}
+			<input type='checkbox' id='Total Revenue_{{rev[0]}}' name='Total Revenue_{{rev[0]}}' checked>
+			<label for="{{rev[0]}}">{{ rev[1] }}</label>
+			{% endfor %}
+			</p>
+		</details>
+		</div>
+		<div class='container'>
+		<details>
+			<summary> Ebitda % </summary>
+			<p style='margin:5; font-size:14; margin-left:50'>
+			<input type='checkbox' id='positive' name='Ebitda %_positive' checked>
+			<label for="positive">Positive</label>
+			<input type='checkbox' id='negative' name='Ebitda %_negative' checked>
+			<label for="negative">Negative</label>
+			</p>
+		</details>
+		</div>
+	</ul>
+   </li>
+    <li>
+        <a class="toggle" href="javascript:void(0);">Deal</a>
+        <ul class="inner">
+	    <div class='container'>
+		    <p> Drag rows from here to the formula bar for calculation. </p>
+	    {% for row in deal %}
+	    {% if row|length %}
+	    <button class='row-button' id="row_deal_{{ loop.index }}" draggable="true" ondragstart="drag(event)" width="80%" height="30%">{{ row }}</button>
+	    {% else %}
+	    {% endif %}
+	    {% endfor %}
+	    </div>
+	</ul>
+   </li>
+    <li>
+        <a class="toggle" href="javascript:void(0);">Income Statement</a>
+        <ul class="inner">
+	    <div class='container'>
+		    <p> Drag rows from here to the formula bar for calculation. </p>
+	    {% for row in rows %}
+	    {% if row|length %}
+	    <button class='row-button' id="row_inc_{{ loop.index }}" draggable="true" ondragstart="drag(event)" width="80%" height="30%">{{ row }}</button>
+	    {% else %}
+	    {% endif %}
+	    {% endfor %}
+	    </div>
+	</ul>
+   </li>
+    <li>
+        <a class="toggle" href="javascript:void(0);">Balance Sheet</a>
+        <ul class="inner">
+	    <div class='container'>
+		    <p> Drag rows from here to the formula bar for calculation. </p>
+	    {% for row in balance_sheet %}
+	    {% if row|length %}
+	    <button class='row-button' id="row_bal_{{ loop.index }}" draggable="true" ondragstart="drag(event)" width="80%" height="30%">{{ row }}</button>
+	    {% else %}
+	    {% endif %}
+	    {% endfor %}
+	    </div>
+	</ul>
+   </li>
+   <li>
+        <a class="toggle" href="javascript:void(0);">Year</a>
+        <ul class="inner">
+	    <div class='container'>
+		    <p> Drag columns from here to the formula bar for filtering values from the rows based on the column. </p>
+	    {% for col in cols %}
+	    {% if col|length %}
+	    <button class='col-button' id="col_{{ loop.index }}" draggable="true" ondragstart="drag(event)" width="80%" height="30%">{{ col }}</button>
+	    {% else %}
+	    {% endif %}
+	    {% endfor %}
+	    </div>
+	</ul>
+   </li>
+
+    <li>
+        <a class="toggle" href="javascript:void(0);">Operands</a>
+        <div class="inner">
+	    <div class='container'>
+		    <p> Drag operands from here to the formula bar for calculation. </p>
+	    {% for row in operands %}
+	    <button class='operand-button' id="operand_{{ loop.index }}" draggable="true" ondragstart="drag(event)" width="80%" height="30%">{{ row }}</button>
+	    {% endfor %}
+	    </div>
+	</div>
+   </li>
+</ul>
+</div>
+		<form>
+<div class='formula-builder'>
+        <div id='icon-panel' class='working-pane'> 
+		<i id='refresh' class="fa fa-refresh" aria-hidden="true"></i>
+		<i id='save' class="fa fa-save" aria-hidden="true"></i>
+	</div>
+	<div id='left' class="working-pane" ondrop="drop(event)" ondragover="allowDrop(event)"> </div>
+        <div id='compute-icon' class='working-pane'> = </div>
+        <div id='compute' class='working-pane'> </div>
+</div>
+		</form>
+
+<div id="results-pane" class="results-pane">
+	<div id='table-div'>
+	</div>
+</div>
+
+</body>
+</html>
