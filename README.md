@@ -13,3 +13,5 @@ git clone https://github.com/nickcellura/nickcellura.git
 sudo python3 sheets.py >> log.txt 2>&1 &
 
 ## Features
+Formula has been designed to work with Google Authentication using oAuth. A client_secrets.json file needs to exist in this directory. Client secrets can be created on Google console and the redirects should use:
+> https://noelteey.com:80/oauth2callback
