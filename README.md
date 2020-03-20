@@ -20,6 +20,9 @@ Formula has been designed to work with Google Authentication using oAuth. A clie
 The user needs to authenticate using their Google username and password. Formula automatically pulls all google sheets under the folder:
 > Model Analysis
 
+All sheets appear for selection under the sheets row.
+![]main_screen.png
+
 ### Sheet selection
 
 
