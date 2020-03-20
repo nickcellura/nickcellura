@@ -21,7 +21,7 @@ The user needs to authenticate using their Google username and password. Formula
 > Model Analysis
 
 All sheets appear for selection under the sheets row.
-![]main_screen.png
+![Homescreen](main_screen.png)
 
 ### Sheet selection
 
