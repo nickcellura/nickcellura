@@ -24,5 +24,19 @@ All sheets appear for selection under the sheets row.
 ![Homescreen](main_screen.png)
 
 ### Sheet selection
+Sheets can be selected and filtered using the following methods.
+* Sheet selectors - Clicking on the name of the sheet toggles it for selection or exclusion
+* Topline filters
+   * Filter by Industry type
+   * Filter by Revenue (Revenue selectors)
+   * Filter by Ebitda % (positive or negative)
+![Topline filters](topline_filters.PNG)
+
+### Row Computations
+Users can just drag and drop the rows and columns into the light green formula pane to form the final table. The table automatically calculates SUM and AVERAGES for all decimal and floating values.
+
+![draganddrop](dragdrop.PNG)
+
+
 
 
